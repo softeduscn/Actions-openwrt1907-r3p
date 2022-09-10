@@ -1,0 +1,108 @@
+#!/bin/sh /etc/rc.common
+#
+# Copyright (C) 2017 openwrt-system-monitor
+#
+# This is free software, licensed under the GNU General Public License v3.
+# See /LICENSE for more information.
+#
+START=99
+STOP=15
+NAME=sysmonitor
+APP_PATH=/usr/share/$NAME
+
+stop()
+{
+	set sysmonitor.sysmonitor.enable=0
+	set commit sysmonitor
+}
+start()
+{
+	[ $(ps |grep ttyd|grep -v grep|wc -l) == 0 ] && /usr/bin/ttyd -6 /bin/login &
+	[ -f /etc/config/upnpd ] && {
+	iptables -N MINIUPNPD
+	iptables -t nat -N MINIUPNPD
+	[ $(iptables -L MINIUPNPD -nv|grep MINIUPNPD|cut -d'(' -f2|cut -d' ' -f1) == 0 ] && iptables -I FORWARD -i pppoe-wan -o br-lan -j MINIUPNPD
+	[ $(iptables -t nat -L MINIUPNPD -nv|grep MINIUPNPD|cut -d'(' -f2|cut -d' ' -f1) == 0 ] && iptables -t nat -I PREROUTING -i pppoe-wan -j MINIUPNPD
+	}
+	if [ $(uci get sysmonitor.sysmonitor.bbr) == 1 ];  then
+		sysctl -w net.ipv4.tcp_congestion_control=bbr
+	else
+		sysctl -w net.ipv4.tcp_congestion_control=cubic
+	fi
+	[ -f /etc/init.d/ipsec ] && {
+	if [ $(uci get sysmonitor.sysmonitor.ipsec) == 1 ];  then
+		uci set ipsec.ipsec.enabled='1'
+		uci commit ipsec
+		[ $(ps -w |grep ipsec/starter|grep -v grep|wc -l) -eq 0 ] && /etc/init.d/ipsec start
+	else
+		uci set ipsec.ipsec.enabled='0'
+		uci commit ipsec
+		[ $(ps -w |grep ipsec/starter|grep -v grep|wc -l) -ne 0 ] && /etc/init.d/ipsec stop
+	fi
+	}
+	[ -f /etc/init.d/luci-app-pptp-server ] && {
+	if [ $(uci get sysmonitor.sysmonitor.pptp) == 1 ];  then
+		uci set luci-app-pptp-server.pptpd.enabled='1'
+		uci commit luci-app-pptp-server
+		 [ $(ps -w |grep pptpd|grep -v grep|wc -l) -eq 0 ] && /etc/init.d/luci-app-pptp-server start
+	else
+		uci set luci-app-pptp-server.pptpd.enabled='0'
+		uci commit luci-app-pptp-server
+		[ $(ps -w |grep pptpd|grep -v grep|wc -l) -ne 0 ] && /etc/init.d/luci-app-pptp-server stop
+	fi
+	}
+	if [ $(uci get sysmonitor.sysmonitor.vpn) == 0 ];  then
+		# Stop Passwall
+		if [ -f "/etc/init.d/passwall" ]; then
+			if [ $(uci get passwall.@global[0].enabled) == 1 ]; then
+				uci set passwall.@global[0].enabled=0
+				uci commit passwall
+				/etc/init.d/passwall stop &
+			fi
+		fi
+		# Stop Shadowsocksr
+		if [ -f "/etc/init.d/shadowsocksr" ]; then
+			[ "$(ps -w |grep ssr- |grep -v grep |wc -l)" -gt 0 ] && /etc/init.d/shadowsocksr stop &
+		fi
+	else
+		if [ -f "/etc/init.d/passwall" ]; then
+			if [ $(uci get passwall.@global[0].tcp_node) != 'nil' ]; then
+				uci set passwall.@global[0].enabled=1
+				uci commit passwall
+				/etc/init.d/passwall restart &
+			fi			
+		elif [ -f "/etc/init.d/shadowsocksr" ]; then
+			/etc/init.d/shadowsocksr restart &
+		else
+			uci set sysmonitor.sysmonitor.vpn=0
+			uci commit sysmonitor
+			touch /tmp/sysmonitor
+		fi
+	fi
+	if [ -f "/etc/init.d/smartdns" ]; then
+		if [ $(uci get sysmonitor.sysmonitor.smartdnsAD) == 1 ];  then
+			sed -i s/".*$conf-file.*$"/"conf-file \/etc\/smartdns\/anti-ad-for-smartdns.conf"/ /etc/smartdns/custom.conf
+		else
+			sed -i s/".*$conf-file.*$"/"#conf-file \/etc\/smartdns\/anti-ad-for-smartdns.conf"/ /etc/smartdns/custom.conf	
+		fi
+	fi
+	if [ -f "/etc/init.d/ddns" ]; then
+		if [ $(uci get sysmonitor.sysmonitor.ddns) == 1 ];  then
+			/etc/init.d/ddns enable
+			if [ $(ps |grep ddns|grep -v grep|wc -l) == 0 ]; then
+				/etc/init.d/ddns start
+			else
+				/etc/init.d/ddns restart
+			fi
+		else
+			/etc/init.d/ddns disable
+			/etc/init.d/ddns stop
+		fi
+	fi
+	$APP_PATH/sysapp.sh getip
+	set sysmonitor.sysmonitor.enable=1
+	set commit sysmonitor
+	$APP_PATH/sysmonitor.sh &
+}
+
+
