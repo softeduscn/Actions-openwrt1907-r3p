@@ -22,6 +22,16 @@ o=s:option(Flag,"ddns", translate("DDNS Enable"))
 o.rmempty=false
 end
 
+if nixio.fs.access("/etc/init.d/smartdns") then
+o=s:option(Flag,"smartdns", translate("SmartDNS Enable"))
+o.rmempty=false
+end
+
+if nixio.fs.access("/etc/init.d/smartdns") then
+o=s:option(Flag,"smartdnsAD", translate("SmartDNS-AD Enable"))
+o.rmempty=false
+end
+
 if nixio.fs.access("/etc/init.d/passwall") or nixio.fs.access("/etc/init.d/shadowsocksr") then
 o=s:option(Flag,"vpn", translate("VPN Enable"))
 o.rmempty=false
@@ -34,12 +44,6 @@ end
 
 if nixio.fs.access("/etc/init.d/luci-app-pptp-server") then
 o=s:option(Flag,"pptp", translate("PPTP Enable"))
-o.rmempty=false
-end
-
-
-if nixio.fs.access("/etc/init.d/smartdns") then
-o=s:option(Flag,"smartdnsAD", translate("SmartDNS-AD Enable"))
 o.rmempty=false
 end
 
