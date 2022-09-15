@@ -33,22 +33,22 @@ start()
 	if [ $(uci get sysmonitor.sysmonitor.ipsec) == 1 ];  then
 		uci set ipsec.ipsec.enabled='1'
 		uci commit ipsec
-		[ $(ps -w |grep ipsec/starter|grep -v grep|wc -l) -eq 0 ] && /etc/init.d/ipsec start
+		[ $(ps |grep ipsec/starter|grep -v grep|wc -l) -eq 0 ] && /etc/init.d/ipsec start
 	else
 		uci set ipsec.ipsec.enabled='0'
 		uci commit ipsec
-		[ $(ps -w |grep ipsec/starter|grep -v grep|wc -l) -ne 0 ] && /etc/init.d/ipsec stop
+		[ $(ps |grep ipsec/starter|grep -v grep|wc -l) -ne 0 ] && /etc/init.d/ipsec stop
 	fi
 	}
 	[ -f /etc/init.d/luci-app-pptp-server ] && {
 	if [ $(uci get sysmonitor.sysmonitor.pptp) == 1 ];  then
 		uci set luci-app-pptp-server.pptpd.enabled='1'
 		uci commit luci-app-pptp-server
-		 [ $(ps -w |grep pptpd|grep -v grep|wc -l) -eq 0 ] && /etc/init.d/luci-app-pptp-server start
+		 [ $(ps |grep pptpd|grep -v grep|wc -l) -eq 0 ] && /etc/init.d/luci-app-pptp-server start
 	else
 		uci set luci-app-pptp-server.pptpd.enabled='0'
 		uci commit luci-app-pptp-server
-		[ $(ps -w |grep pptpd|grep -v grep|wc -l) -ne 0 ] && /etc/init.d/luci-app-pptp-server stop
+		[ $(ps |grep pptpd|grep -v grep|wc -l) -ne 0 ] && /etc/init.d/luci-app-pptp-server stop
 	fi
 	}
 	if [ $(uci get sysmonitor.sysmonitor.vpn) == 0 ];  then
@@ -57,22 +57,22 @@ start()
 			if [ $(uci get passwall.@global[0].enabled) == 1 ]; then
 				uci set passwall.@global[0].enabled=0
 				uci commit passwall
-				/etc/init.d/passwall stop &
+				[ "$(ps |grep passwall |grep -v grep |wc -l)" -gt 0 ] && /etc/init.d/passwall stop &
 			fi
 		fi
 		# Stop Shadowsocksr
 		if [ -f "/etc/init.d/shadowsocksr" ]; then
-			[ "$(ps -w |grep ssr- |grep -v grep |wc -l)" -gt 0 ] && /etc/init.d/shadowsocksr stop &
+			[ "$(ps |grep ssr- |grep -v grep |wc -l)" -gt 0 ] && /etc/init.d/shadowsocksr stop &
 		fi
 	else
 		if [ -f "/etc/init.d/passwall" ]; then
 			if [ $(uci get passwall.@global[0].tcp_node) != 'nil' ]; then
 				uci set passwall.@global[0].enabled=1
 				uci commit passwall
-				/etc/init.d/passwall restart &
+				[ "$(ps |grep passwall |grep -v grep |wc -l)" -eq 0 ] && /etc/init.d/passwall restart &
 			fi			
-		elif [ -f "/etc/init.d/shadowsocksr" ]; then
-			/etc/init.d/shadowsocksr restart &
+		elif [ -f "/etc/init.d/shadowsocksr" ]; then		
+		[ "$(ps |grep ssr- |grep -v grep |wc -l)" -eq 0 ] && /etc/init.d/shadowsocksr restart &
 		else
 			uci set sysmonitor.sysmonitor.vpn=0
 			uci commit sysmonitor
@@ -98,6 +98,7 @@ start()
 		else
 			sed -i s/".*$conf-file.*$"/"#conf-file \/etc\/smartdns\/anti-ad-for-smartdns.conf"/ /etc/smartdns/custom.conf	
 		fi
+		[ -f /tmp/smartdns.cache ] && rm /tmp/smartdns.cache
 		if [ $(uci get sysmonitor.sysmonitor.smartdns) == 1 ];  then
 			uci set smartdns.@smartdns[0].enabled='1'
 			uci set smartdns.@smartdns[0].seconddns_enabled='1'
@@ -112,8 +113,7 @@ start()
 			uci set smartdns.@smartdns[0].enabled='0'
 			uci set smartdns.@smartdns[0].seconddns_enabled='0'
 			uci commit smartdns
-			/etc/init.d/smartdns stop
-			[ -f /tmp/smartdns.cache ] && rm /tmp/smartdns.cache
+			[ "$(ps |grep smartdns |grep -v grep |wc -l)" -gt 0 ] && /etc/init.d/smartdns stop
 		fi
 	fi
 	$APP_PATH/sysapp.sh getip
