@@ -76,7 +76,7 @@ end
 function action_wg_status()
 	luci.http.prepare_content("application/json")
 	luci.http.write_json({
-		wg_state = luci.sys.exec("curl http://47.100.183.141/getwg.php")
+		wg_state = luci.sys.exec("curl http://47.100.183.141/getwg.php")..'<button class="button1"><a href="/cgi-bin/luci/admin/sys/sysmonitor/refreshwg" title="Update wireguard">Update</a></button>'
 	})
 end
 
