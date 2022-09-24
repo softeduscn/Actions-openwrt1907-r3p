@@ -1,4 +1,4 @@
-<style>.button1 {-webkit-transition-duration: 0.4s;transition-duration: 0.4s;padding: 1px 2px;text-align: center;background-color: white;color: black;border: 2px solid #4CAF50;border-radius:1px;}.button1:hover {background-color: #4CAF50;color: white;}.button1 {font-size: 13px;}</style>
+<style>.button1 {-webkit-transition-duration: 0.4s;transition-duration: 0.4s;padding: 1px 16px;text-align: center;background-color: white;color: black;border: 2px solid #4CAF50;border-radius:5px;}.button1:hover {background-color: #4CAF50;color: white;}.button1 {font-size: 13px;}</style>
 <fieldset class="cbi-section">
 	<table width="100%" cellspacing="10" id="_xlnetacc_ip_status_table">
 		<tr><td width="20%" title="Update Wan ipaddress..." id="_ip_title"><font color=green></font></td><td title="" id="_ip_state"><em></em></td></tr>
@@ -22,9 +22,6 @@
 	<table width="100%" cellspacing="10" id="_xlnetacc_pptp_status_table">
 		<tr><td title="GO TO PPTP" width="20%" id="_pptp_title"></td><td title="GO TO PPTP user..." id="_pptp_state"><em></em></td></tr>
 	</table>
-	<table width="100%" cellspacing="10" id="_xlnetacc_service_status_table">
-		<tr><td width="20%" id="_service_title"></td><td title="" id="_service_state"><em></em></td></tr>
-	</table>
 </fieldset>
 
 <script type="text/javascript">//<![CDATA[
@@ -35,7 +32,6 @@
 	var wireguard_state = document.getElementById('_wireguard_state');
 	var ipsec_state = document.getElementById('_ipsec_state');
 	var pptp_state = document.getElementById('_pptp_state');
-	var service_state = document.getElementById('_service_state');
 	
 	var ip_title = document.getElementById('_ip_title');
 	var minidlna_title = document.getElementById('_minidlna_title');
@@ -44,7 +40,6 @@
 	var wireguard_title = document.getElementById('_wireguard_title');
 	var ipsec_title = document.getElementById('_ipsec_title');
 	var pptp_title = document.getElementById('_pptp_title');
-	var service_title = document.getElementById('_service_title')
 	
 	XHR.poll(5, '<%=luci.dispatcher.build_url("admin", "sys", "sysmonitor", "ip_status")%>', null, function(x, status) {
 		if ( x && x.status == 200 ) {
@@ -107,11 +102,6 @@
 			else {
 			pptp_title.innerHTML ='<em><b><font color=green>PPTP Users</font></b></em>';
 			pptp_state.innerHTML ='<em><b><a href="/cgi-bin/luci/admin/vpn/pptpd/online"><font color=green>'+status.pptp_state+'</font></a></b></em>';}
-		}
-	});
-	XHR.poll(5, '<%=luci.dispatcher.build_url("admin", "sys", "sysmonitor", "service_status")%>', null, function(x, status) {
-		if ( x && x.status == 200 ) {
-			service_state.innerHTML ='<em><b>'+status.service_state+'</b></em>';
 		}
 	});
 //]]></script>

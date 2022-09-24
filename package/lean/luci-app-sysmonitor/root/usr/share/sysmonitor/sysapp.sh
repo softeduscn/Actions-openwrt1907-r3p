@@ -50,8 +50,8 @@ ssr() {
 	ssrstatus=''
 	ssr=''
 	ssrp=''
-	[ -f "/etc/init.d/shadowsocksr" ] && ssr='Shadowsocksr '
-	[ -f "/etc/init.d/passwall" ] && ssrp='Passwall '
+	[ -f "/etc/init.d/shadowsocksr" ] && ssr='<a href="/cgi-bin/luci/admin/services/shadowsocksr" target="_blank">Shadowsocksr '
+	[ -f "/etc/init.d/passwall" ] && ssrp='<a href="/cgi-bin/luci/admin/services/passwall" target="_blank">Passwall '
 	if [ ! "$ssr" == '' ]; then
 		ssrstatus='Stopped'
 		[ "$(ps -w |grep ssrplus |grep -v grep |wc -l)" -gt 0 ] && ssrstatus='Running'
@@ -64,9 +64,9 @@ ssr() {
 		echo "No VPN Server installed."
 	else
 		if [ "$ssrstatus" == 'Running' ]; then
-			echo $ssr$ssrstatus
+			echo $ssr$ssrstatus'</a>'
 		elif [ "$ssrpstatus" == 'Running' ]; then
-			echo $ssrp$ssrpstatus
+			echo $ssrp$ssrpstatus'</a>'
 		else
 			echo "VPN "$ssrpstatus
 		fi
@@ -310,58 +310,41 @@ echo $status
 }
 
 smartdns() {
-if [ -f "/etc/init.d/smartdns" ]; then
-	uci set smartdns.@smartdns[0].enabled='0'
-	uci set smartdns.@smartdns[0].seconddns_enabled='0'
-	uci commit smartdns
-	/etc/init.d/smartdns stop
-fi
-}
-
-service_smartdns() {
-if [ -f "/etc/init.d/smartdns" ]; then
-	if [ "$(ps |grep smartdns|grep -v grep|wc -l)" == 0 ]; then
-		uci set sysmonitor.sysmonitor.smartdns=1
-		uci set smartdns.@smartdns[0].enabled='1'
-		uci set smartdns.@smartdns[0].seconddns_enabled='0'
-		uci set smartdns.@smartdns[0].port='53'
-		uci commit smartdns
-		sed -i '/address/d' /etc/smartdns/custom.conf
-		echo "address /NAS/19.168.1.8" >> /etc/smartdns/custom.conf
-		/etc/init.d/smartdns start
-	else
-		uci set sysmonitor.sysmonitor.smartdns=0
+	if [ -f "/etc/init.d/smartdns" ]; then
 		uci set smartdns.@smartdns[0].enabled='0'
 		uci set smartdns.@smartdns[0].seconddns_enabled='0'
 		uci commit smartdns
 		/etc/init.d/smartdns stop
 	fi
-	uci commit sysmonitor
-fi
 }
-service_ddns() {
-if [ -f "/etc/init.d/ddns" ]; then
-	if [ "$(ps |grep ddns|grep -v grep|wc -l)" == 0 ]; then
-		uci set sysmonitor.sysmonitor.ddns=1
-		/etc/init.d/ddns enable
-		/etc/init.d/ddns start
+
+service_smartdns() {
+	if [ "$(ps |grep smartdns|grep -v grep|wc -l)" == 0 ]; then
+		uci set sysmonitor.sysmonitor.smartdns=1
 	else
-		uci set sysmonitor.sysmonitor.ddns=0
-		/etc/init.d/ddns disable
-		/etc/init.d/ddns stop
+		uci set sysmonitor.sysmonitor.smartdns=0
 	fi
 	uci commit sysmonitor
-fi
+	/etc/init.d/sysmonitor restart
+}
+service_ddns() {
+	if [ "$(ps |grep ddns|grep -v grep|wc -l)" == 0 ]; then
+		uci set sysmonitor.sysmonitor.ddns=1
+	else
+		uci set sysmonitor.sysmonitor.ddns=0
+	fi
+	uci commit sysmonitor
+	/etc/init.d/sysmonitor restart
 }
 
 service_vpn() {
-if [ "$(uci get sysmonitor.sysmonitor.vpn)" == 0 ]; then
-	uci set sysmonitor.sysmonitor.vpn=1
-else
-	uci set sysmonitor.sysmonitor.vpn=0
-fi
-uci commit sysmonitor
-/etc/init.d/sysmonitor restart
+	if [ "$(uci get sysmonitor.sysmonitor.vpn)" == 0 ]; then
+		uci set sysmonitor.sysmonitor.vpn=1
+	else
+		uci set sysmonitor.sysmonitor.vpn=0
+	fi
+	uci commit sysmonitor
+	/etc/init.d/sysmonitor restart
 }
 
 arg1=$1
