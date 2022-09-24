@@ -9,11 +9,11 @@ m:append(Template("sysmonitor/status"))
 
 s = m:section(TypedSection, "sysmonitor", translate("System Settings"))
 s.anonymous = true
-s.description ='<style>.button1 {-webkit-transition-duration: 0.4s;transition-duration: 0.4s;padding: 1px 16px;text-align: center;background-color: white;color: black;border: 2px solid #4CAF50;border-radius:5px;}.button1:hover {background-color: #4CAF50;color: white;}.button1 {font-size: 13px;}</style><button class="button1"><a href="http://'..ip..':7681" target="_blank">' .. translate("OpenTerminal") .. '</a></button>'
+s.description ='<style>.button1 {-webkit-transition-duration: 0.4s;transition-duration: 0.4s;padding: 1px 16px;text-align: center;background-color: white;color: black;border: 2px solid #4CAF50;border-radius:5px;}.button1:hover {background-color: #4CAF50;color: white;}.button1 {font-size: 13px;}</style><button class="button1"><a href="http://'..ip..':7681" target="_blank">' .. translate("OpenTerminal") .. '</a></button> <button class="button1"><a href="/cgi-bin/luci/admin/sys/sysmonitor/service_ddns">' .. translate("DDNS") .. '</a></button> <button class="button1"><a href="/cgi-bin/luci/admin/sys/sysmonitor/service_smartdns">' .. translate("SmartDNS") .. '</a></button> <button class="button1"><a href="/cgi-bin/luci/admin/sys/sysmonitor/service_vpn">' .. translate("VPN") .. '</a></button>'
 
 o=s:option(Flag,"enable", translate("Enable"))
 o.rmempty=false
-
+--[[
 o=s:option(Flag,"bbr", translate("BBR Enable"))
 o.rmempty=false
 
@@ -31,7 +31,7 @@ if nixio.fs.access("/etc/init.d/smartdns") then
 o=s:option(Flag,"smartdnsAD", translate("SmartDNS-AD Enable"))
 o.rmempty=false
 end
-
+]]--
 if nixio.fs.access("/etc/init.d/passwall") or nixio.fs.access("/etc/init.d/shadowsocksr") then
 o=s:option(Flag,"vpn", translate("VPN Enable"))
 o.rmempty=false

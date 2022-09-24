@@ -318,10 +318,64 @@ if [ -f "/etc/init.d/smartdns" ]; then
 fi
 }
 
+service_smartdns() {
+if [ -f "/etc/init.d/smartdns" ]; then
+	if [ "$(ps |grep smartdns|grep -v grep|wc -l)" == 0 ]; then
+		uci set sysmonitor.sysmonitor.smartdns=1
+		uci set smartdns.@smartdns[0].enabled='1'
+		uci set smartdns.@smartdns[0].seconddns_enabled='0'
+		uci set smartdns.@smartdns[0].port='53'
+		uci commit smartdns
+		sed -i '/address/d' /etc/smartdns/custom.conf
+		echo "address /NAS/19.168.1.8" >> /etc/smartdns/custom.conf
+		/etc/init.d/smartdns start
+	else
+		uci set sysmonitor.sysmonitor.smartdns=0
+		uci set smartdns.@smartdns[0].enabled='0'
+		uci set smartdns.@smartdns[0].seconddns_enabled='0'
+		uci commit smartdns
+		/etc/init.d/smartdns stop
+	fi
+	uci commit sysmonitor
+fi
+}
+service_ddns() {
+if [ -f "/etc/init.d/ddns" ]; then
+	if [ "$(ps |grep ddns|grep -v grep|wc -l)" == 0 ]; then
+		uci set sysmonitor.sysmonitor.ddns=1
+		/etc/init.d/ddns enable
+		/etc/init.d/ddns start
+	else
+		uci set sysmonitor.sysmonitor.ddns=0
+		/etc/init.d/ddns disable
+		/etc/init.d/ddns stop
+	fi
+	uci commit sysmonitor
+fi
+}
+
+service_vpn() {
+if [ "$(uci get sysmonitor.sysmonitor.vpn)" == 0 ]; then
+	uci set sysmonitor.sysmonitor.vpn=1
+else
+	uci set sysmonitor.sysmonitor.vpn=0
+fi
+uci commit sysmonitor
+/etc/init.d/sysmonitor restart
+}
+
 arg1=$1
 shift
 case $arg1 in
-
+service_smartdns)
+	service_smartdns
+	;;
+service_ddns)
+	service_ddns
+	;;
+service_vpn)
+	service_vpn
+	;;
 minidlna_status)
 	minidlna_status
 	;;

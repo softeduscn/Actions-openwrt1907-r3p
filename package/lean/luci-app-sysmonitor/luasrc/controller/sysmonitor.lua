@@ -21,6 +21,8 @@ function index()
 	entry({"admin", "sys", "sysmonitor", "wireguard_status"}, call("action_wireguard_status")).leaf = true
 	entry({"admin", "sys", "sysmonitor", "ipsec_status"}, call("action_ipsec_status")).leaf = true
 	entry({"admin", "sys", "sysmonitor", "pptp_status"}, call("action_pptp_status")).leaf = true
+	entry({"admin", "sys", "sysmonitor", "service_status"}, call("action_service_status")).leaf = true
+		
 	entry({"admin", "sys", "sysmonitor", "switch_vpn"}, call("switch_vpn")).leaf = true
 	entry({"admin", "sys", "sysmonitor", "refresh"}, call("refresh")).leaf = true
 	entry({"admin", "sys", "sysmonitor", "refreshwg"}, call("refreshwg")).leaf = true
@@ -28,6 +30,9 @@ function index()
 	entry({"admin", "sys", "sysmonitor", "get_log"}, call("get_log")).leaf = true
 	entry({"admin", "sys", "sysmonitor", "firmware"}, call("firmware")).leaf = true
 	entry({"admin", "sys", "sysmonitor", "wg_users"}, call("wg_users")).leaf = true
+	entry({"admin", "sys", "sysmonitor", "service_smartdns"}, call("service_smartdns")).leaf = true
+	entry({"admin", "sys", "sysmonitor", "service_ddns"}, call("service_ddns")).leaf = true
+	entry({"admin", "sys", "sysmonitor", "service_vpn"}, call("service_vpn")).leaf = true
 end
 
 function get_log()
@@ -76,7 +81,7 @@ end
 function action_wg_status()
 	luci.http.prepare_content("application/json")
 	luci.http.write_json({
-		wg_state = luci.sys.exec("curl http://47.100.183.141/getwg.php")..'<button class="button1"><a href="/cgi-bin/luci/admin/sys/sysmonitor/refreshwg" title="Update wireguard">Update</a></button>'
+		wg_state = luci.sys.exec("curl http://47.100.183.141/getwg.php")
 	})
 end
 
@@ -91,6 +96,24 @@ function action_pptp_status()
 	luci.http.prepare_content("application/json")
 	luci.http.write_json({
 		pptp_state = luci.sys.exec("/usr/share/sysmonitor/sysapp.sh pptp")
+	})
+end
+
+function action_service_status()
+	tmp = tonumber(luci.sys.exec("ps |grep ddns|grep -v grep|wc -l"))
+	if ( tmp == 0 ) then
+		ddns = '<font color=red>DDNS<a href="/cgi-bin/luci/admin/services/ddns" target="_blank">--></a></font>'
+	else
+		ddns = '<font color=green>DDNS<a href="/cgi-bin/luci/admin/services/ddns" target="_blank">--></a></font>'
+	end	tmp = tonumber(luci.sys.exec("ps |grep smartdns|grep -v grep|wc -l"))
+	if ( tmp == 0 ) then
+		smartdns = ' <font color=red>SmartDNS<a href="/cgi-bin/luci/admin/services/smartdns" target="_blank">--></a></font>'
+	else
+		smartdns = ' <font color=green>SmartDNS<a href="/cgi-bin/luci/admin/services/smartdns" target="_blank">--></a></font>'
+	end
+	luci.http.prepare_content("application/json")
+	luci.http.write_json({
+		service_state = ddns .. smartdns
 	})
 end
 
@@ -119,3 +142,17 @@ function firmware()
 	luci.sys.exec("/usr/share/sysmonitor/sysapp.sh firmware")
 end
 
+function service_smartdns()
+	luci.http.redirect(luci.dispatcher.build_url("admin", "sys", "sysmonitor"))
+	luci.sys.exec("/usr/share/sysmonitor/sysapp.sh service_smartdns")	
+end
+
+function service_ddns()
+	luci.http.redirect(luci.dispatcher.build_url("admin", "sys", "sysmonitor"))
+	luci.sys.exec("/usr/share/sysmonitor/sysapp.sh service_ddns")	
+end
+
+function service_vpn()
+	luci.http.redirect(luci.dispatcher.build_url("admin", "sys", "sysmonitor"))
+	luci.sys.exec("/usr/share/sysmonitor/sysapp.sh service_vpn")
+end
