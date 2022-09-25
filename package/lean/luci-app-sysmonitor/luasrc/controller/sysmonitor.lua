@@ -16,7 +16,6 @@ function index()
 
 	entry({"admin", "sys", "sysmonitor", "minidlna_status"}, call("action_minidlna_status")).leaf = true
 	entry({"admin", "sys", "sysmonitor", "ip_status"}, call("action_ip_status")).leaf = true
-	entry({"admin", "sys", "sysmonitor", "vpn_status"}, call("action_vpn_status")).leaf = true
 	entry({"admin", "sys", "sysmonitor", "wg_status"}, call("action_wg_status")).leaf = true
 	entry({"admin", "sys", "sysmonitor", "wireguard_status"}, call("action_wireguard_status")).leaf = true
 	entry({"admin", "sys", "sysmonitor", "ipsec_status"}, call("action_ipsec_status")).leaf = true
@@ -64,13 +63,6 @@ function action_minidlna_status()
 	})
 end
 
-function action_vpn_status()
-	luci.http.prepare_content("application/json")
-	luci.http.write_json({
-		vpn_state = luci.sys.exec("/usr/share/sysmonitor/sysapp.sh ssr")
-	})
-end
-
 function action_wireguard_status()
 	luci.http.prepare_content("application/json")
 	luci.http.write_json({
@@ -112,9 +104,25 @@ function action_service_status()
 	else
 		smartdns = ' <font color=green>SmartDNS<a href="/cgi-bin/luci/admin/services/smartdns" target="_blank">--></a></font>'
 	end
+	tmp = tonumber(luci.sys.exec("ps |grep ssr-|grep -v grep|wc -l"))
+	if ( tmp == 0 ) then
+		tmp = tonumber(luci.sys.exec("ps |grep passwall|grep -v grep|wc -l"))
+		if ( tmp == 0 ) then
+			vpn=''
+		else
+			vpn="Passwall"
+		end
+	else
+		vpn="Shadowsocksr"
+	end
+	if ( string.len(vpn) == 0 ) then
+		vpn=' <font color=red>VPN(stop)</font>'
+	else
+		vpn = ' <font color=green>VPN('..vpn..')<a href="/cgi-bin/luci/admin/services/'..string.lower(vpn)..'" target="_blank">--></a></font>'
+	end
 	luci.http.prepare_content("application/json")
 	luci.http.write_json({
-		service_state = ddns .. smartdns
+		service_state = ddns .. smartdns .. vpn
 	})
 end
 
@@ -157,3 +165,4 @@ function service_vpn()
 	luci.http.redirect(luci.dispatcher.build_url("admin", "sys", "sysmonitor"))
 	luci.sys.exec("/usr/share/sysmonitor/sysapp.sh service_vpn")
 end
+

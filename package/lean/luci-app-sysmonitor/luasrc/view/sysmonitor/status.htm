@@ -10,9 +10,6 @@
 	<table width="100%" cellspacing="10" id="_xlnetacc_wg_status_table">
 		<tr><td width="20%" title="Update Wireguard ip address..." id="_wg_title"></td><td id="_wg_state"><em></em></td></tr>
 	</table>
-	<table width="100%" cellspacing="10" id="_xlnetacc_vpn_status_table">
-		<tr><td width="20%" title="Start/Stop VPN" id="_vpn_title"></td><td title="Switch VPN ..." id="_vpn_state"><em></em></td></tr>
-	</table>
 	<table width="100%" cellspacing="10" id="_xlnetacc_wireguard_status_table">
 		<tr><td title="GO TO wireguard" width="20%" id="_wireguard_title"></td><td title="GO TO Wireguard user..." id="_wireguard_state"><em></em></td></tr>
 	</table>
@@ -27,7 +24,6 @@
 <script type="text/javascript">//<![CDATA[
 	var ip_state = document.getElementById('_ip_state');
 	var minidlna_state = document.getElementById('_minidlna_state');
-	var vpn_state = document.getElementById('_vpn_state');
 	var wg_state = document.getElementById('_wg_state');
 	var wireguard_state = document.getElementById('_wireguard_state');
 	var ipsec_state = document.getElementById('_ipsec_state');
@@ -35,7 +31,6 @@
 	
 	var ip_title = document.getElementById('_ip_title');
 	var minidlna_title = document.getElementById('_minidlna_title');
-	var vpn_title = document.getElementById('_vpn_title');
 	var wg_title = document.getElementById('_wg_title');
 	var wireguard_title = document.getElementById('_wireguard_title');
 	var ipsec_title = document.getElementById('_ipsec_title');
@@ -54,19 +49,6 @@
 		}
 	});
 */
-	XHR.poll(5, '<%=luci.dispatcher.build_url("admin", "sys", "sysmonitor", "vpn_status")%>', null, function(x, status) {
-		if ( x && x.status == 200 ) {
-			if ( status.vpn_state.search(/Running/) > 0 ) {
-			vpn_title.innerHTML ='<em><b><font color=green>vpn</font></b></em>';
-			vpn_state.innerHTML ='<em><b><font color=green>'+status.vpn_state+'</font></a></b></em>';}
-			else if ( status.vpn_state.search(/Stopped/) > 0 ) {
-			vpn_title.innerHTML ='<em><b><font color=green>vpn</font></b></em>';
-			vpn_state.innerHTML ='<em><b><font color=red>'+status.vpn_state+'</font></b></em>';}
-			else {
-			vpn_title.innerHTML ='<em><b></b></em>';
-			vpn_state.innerHTML ='<em><b></b></em>';}
-		}
-	});
 	XHR.poll(5, '<%=luci.dispatcher.build_url("admin", "sys", "sysmonitor", "wg_status")%>', null, function(x, status) {
 		if ( x && x.status == 200 ) {
 			wg_title.innerHTML ='<em><b><font color=6666cc>wireguard</font></b></em>';
@@ -105,4 +87,5 @@
 		}
 	});
 //]]></script>
+
 
