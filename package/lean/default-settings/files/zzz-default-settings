@@ -160,6 +160,8 @@ config interface 'wghome'
 	list addresses '192.168.8.119/24'
 	list addresses '192.168.7.119/24'
 	list addresses '192.168.6.119/24'
+	option listen_port '51820'
+
 config wireguard_wghome
 	option description 'ALiCloud'
 	option persistent_keepalive '25'
@@ -168,14 +170,17 @@ config wireguard_wghome
 	option route_allowed_ips '1'
 	option endpoint_host '47.100.183.141'
 	option public_key 'GWLcAE1Of7H1iolrSRAK1FYGB5dhwbEMTZvEJxoZYGA='
+
 config wireguard_wghome
 	option public_key 'RuCdaOHKPDf2c2kihx2dzBhEDKZnbnhP1N4aUBkzw3A='
 	option route_allowed_ips '1'
 	list allowed_ips '192.168.8.0/24'
+
 config wireguard_wghome
 	option public_key 'HkRSRzDMks74AmFQlnByouVNR6E/o5I+j033QqF1UyI='
 	option route_allowed_ips '1'
 	list allowed_ips '192.168.7.0/24'
+
 config wireguard_wghome
 	option public_key 'ql9g9ngGQMq9cyBaun5QjnyROyh7Cu4zJ9eZwFM6UGw='
 	option route_allowed_ips '1'
