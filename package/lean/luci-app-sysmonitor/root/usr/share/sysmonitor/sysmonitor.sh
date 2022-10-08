@@ -28,6 +28,11 @@ ping_url() {
 	echo $status
 }
 
+check() {
+	result=$(curl -s --connect-timeout 1 $1)
+	echo $result
+}
+
 check_ip() {
 	if [ ! -n "$1" ]; then
 		#echo "NO IP!"
@@ -69,8 +74,10 @@ check_ip() {
 	rm /tmp/relay
 }
 
-gateway=$(check_ip $(uci get network.wan.gateway))
+sysctl -w net.ipv4.tcp_congestion_control=bbr >/dev/null
+gateway=$(uci get network.wan.gateway)
 d=$(date "+%Y-%m-%d %H:%M:%S")
+echo $d": Sysmonitor is up." >> /var/log/sysmonitor.log
 echo $d": gateway="$gateway >> /var/log/sysmonitor.log
 
 while [ "1" == "1" ]; do #死循环
@@ -87,10 +94,15 @@ while [ "1" == "1" ]; do #死循环
 	homeip=$(uci_get_by_name $NAME sysmonitor homeip 0)
 	vpnip=$(uci_get_by_name $NAME sysmonitor vpnip 0)
 	gateway=$(check_ip $(uci get network.wan.gateway))
+	if [ "$vpnip" == "192.168.1.110" ]; then
+		url=$vpnip"/ip.html"
+	else
+		url=$vpnip":8080/ip.html"
+	fi
 	runssr=0
-	[ -f "/etc/init.d/shadowsocksr" ] && runssr=$(ps |grep ssr- |grep -v grep |wc -l)
+	[ -f "/etc/init.d/shadowsocksr" ] && runssr=$(ps |grep ssrplus/bin/ssr-|grep -v grep |wc -l)
 	if [ "$runssr" == 0 ];then
-		[ -f "/etc/init.d/passwall" ] && runssr=$(ps |grep passwall |grep -v grep |wc -l)
+		[ -f "/etc/init.d/passwall" ] && runssr=$(ps |grep /etc/passwall |grep -v grep |wc -l)
 	fi
 	if [ "$runssr" -gt 0 ]; then
 		vpnok=0
@@ -98,8 +110,7 @@ while [ "1" == "1" ]; do #死循环
 			d=$(date "+%Y-%m-%d %H:%M:%S")
 			echo $d": gateway="$homeip "(Local VPN)" >> /var/log/sysmonitor.log
 			uci set network.wan.gateway=$homeip
-			uci del_list network.wan.dns=$vpnip
-			uci del_list network.wan.dns=$homeip
+			sed -i '/list dns/d' /etc/config/network
 			uci add_list network.wan.dns=$homeip
 			uci commit network
 			uci set dhcp.@dnsmasq[0].rebind_localhost='1'
@@ -110,16 +121,17 @@ while [ "1" == "1" ]; do #死循环
 			/etc/init.d/odhcpd restart
 		fi
 	else
-		status=$(ping_url $vpnip)
-		if [ "$status" == 0 ]; then
+		status=$(check $url)
+		if [ ! -n "$status" ]; then
 			vpnok=0
 			if [ $gateway == $vpnip ]; then
 				d=$(date "+%Y-%m-%d %H:%M:%S")
 				echo $d": gateway="$homeip >> /var/log/sysmonitor.log
 				uci set network.wan.gateway=$homeip
-				uci del_list network.wan.dns=$vpnip
-				uci del_list network.wan.dns=$homeip
-				uci add_list network.wan.dns=$homeip
+				uci del network.wan.dns
+				uci add_list network.wan.dns='119.29.29.29'
+				uci add_list network.wan.dns='223.5.5.5'
+				uci add_list network.wan.dns='114.114.114.114'
 				uci commit network
 				uci set dhcp.@dnsmasq[0].rebind_localhost='1'
 				uci set dhcp.@dnsmasq[0].rebind_protection='1'
@@ -130,12 +142,11 @@ while [ "1" == "1" ]; do #死循环
 			fi
 		else
 			vpnok=1
-			if [ $gateway == $homeip ]; then
+			if [ ! $gateway == $vpnip ]; then
 				d=$(date "+%Y-%m-%d %H:%M:%S")
 				echo $d": VPN-gateway="$vpnip >> /var/log/sysmonitor.log
 				uci set network.wan.gateway=$vpnip
-				uci del_list network.wan.dns=$homeip
-				uci del_list network.wan.dns=$vpnip
+				uci del network.wan.dns
 				uci add_list network.wan.dns=$vpnip
 				uci commit network
 				uci set dhcp.@dnsmasq[0].rebind_localhost='0'
@@ -143,22 +154,39 @@ while [ "1" == "1" ]; do #死循环
 				uci commit dhcp
 				ifup wan
 				ifup wan6
-				$APP_PATH/sysapp.sh smartdns
+				$APP_PATH/sysapp.sh set_smartdns
 				/etc/init.d/odhcpd restart
 			fi
 		fi
 	fi
-	[ $(uci_get_by_name $NAME sysmonitor enable 0) == 0 ] && exit 0
 
 	num=0
 	while [ $num -le 10 ]; do
 		sleep $sleep_unit
-		[ $(uci_get_by_name $NAME sysmonitor enable 0) == 0 ] && exit 0
+		if [ $(uci_get_by_name $NAME sysmonitor enable 0) == 0 ]; then
+			d=$(date "+%Y-%m-%d %H:%M:%S")
+			echo $d": gateway="$homeip >> /var/log/sysmonitor.log
+			echo $d": Sysmonitor is down." >> /var/log/sysmonitor.log
+			uci set network.wan.gateway=$homeip
+#			sed -i '/list dns/d' /etc/config/network
+			uci del network.wan.dns
+			uci add_list network.wan.dns='119.29.29.29'
+			uci add_list network.wan.dns='223.5.5.5'
+			uci add_list network.wan.dns='114.114.114.114'
+			uci commit network
+			uci set dhcp.@dnsmasq[0].rebind_localhost='1'
+			uci set dhcp.@dnsmasq[0].rebind_protection='1'
+			uci commit dhcp
+			ifup wan
+			ifup wan6
+			/etc/init.d/odhcpd restart		
+			exit 0
+		fi
 		let num=num+sleep_unit
 		runssr=0
-		[ -f "/etc/init.d/shadowsocksr" ] && runssr=$(ps |grep ssr- |grep -v grep |wc -l)
+		[ -f "/etc/init.d/shadowsocksr" ] && runssr=$(ps |grep ssrplus/bin/ssr-|grep -v grep |wc -l)
 		if [ "$runssr" == 0 ]; then 
-			[ -f "/etc/init.d/passwall" ] && runssr=$(ps |grep passwall |grep -v grep |wc -l)
+			[ -f "/etc/init.d/passwall" ] && runssr=$(ps |grep /etc/passwall |grep -v grep |wc -l)
 		fi
 		gateway=$(route |grep default|sed 's/default[[:space:]]*//'|sed 's/[[:space:]].*$//')
 		if [ "$runssr" == 0 ]; then

@@ -20,21 +20,13 @@ o=s:option(Flag,"ddns", translate("DDNS Enable"))
 o.rmempty=false
 end
 
-if nixio.fs.access("/etc/init.d/smartdns") then
-o=s:option(Flag,"smartdns", translate("SmartDNS Enable"))
+if nixio.fs.access("/etc/init.d/shadowsocksr") then
+o=s:option(Flag,"vpns", translate("SSR Enable"))
 o.rmempty=false
 end
---[[
-o=s:option(Flag,"bbr", translate("BBR Enable"))
-o.rmempty=false
 
-if nixio.fs.access("/etc/init.d/smartdns") then
-o=s:option(Flag,"smartdnsAD", translate("SmartDNS-AD Enable"))
-o.rmempty=false
-end
-]]--
-if nixio.fs.access("/etc/init.d/passwall") or nixio.fs.access("/etc/init.d/shadowsocksr") then
-o=s:option(Flag,"vpn", translate("VPN Enable"))
+if nixio.fs.access("/etc/init.d/passwall") then
+o=s:option(Flag,"vpnp", translate("Passwall Enable"))
 o.rmempty=false
 end
 
@@ -48,12 +40,34 @@ o=s:option(Flag,"pptp", translate("PPTP Enable"))
 o.rmempty=false
 end
 
+if nixio.fs.access("/etc/init.d/smartdns") then
+o=s:option(Flag,"smartdns", translate("SmartDNS Enable"))
+o.rmempty=false
+
+o = s:option(Value, "smartdnsPORT", translate("SmartDNS PORT"))
+o:value("53")
+o:value("6053")
+o.default = "53"
+o.rmempty = false
+end
+--[[
+if nixio.fs.access("/etc/init.d/smartdns") then
+o=s:option(Flag,"smartdnsAD", translate("SmartDNS-AD Enable"))
+o.rmempty=false
+end
+]]--
+
 o = s:option(Value, "homeip", translate("Home IP Address"))
 --o.description = translate("IP for Home(192.168.1.1)")
+o:value("192.168.1.1")
+o.default = "192.168.1.1"
 o.datatype = "or(host)"
 o.rmempty = false
 
 o = s:option(Value, "vpnip", translate("VPN IP Address"))
+o:value("192.168.1.110",translate("SSR (192.168.1.110)"))
+o:value("192.168.1.8",translate("Passwall(192.168.1.8"))
+o.default = "192.168.1.110"
 --o.description = translate("IP for VPN Server(192.168.1.110)")
 o.datatype = "or(host)"
 o.rmempty = false

@@ -811,6 +811,7 @@ start_rules() {
 }
 
 start() {
+	/usr/share/sysmonitor/sysapp.sh selvpn s
 	set_lock
 	echolog "----------start------------"
 	mkdir -p /var/run /var/lock /var/log /tmp/dnsmasq.d $TMP_BIN_PATH $TMP_DNSMASQ_PATH

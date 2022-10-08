@@ -18,111 +18,18 @@ stop()
 start()
 {
 	[ $(ps |grep ttyd|grep -v grep|wc -l) == 0 ] && /usr/bin/ttyd -6 /bin/login &
-	[ -f /etc/config/upnpd ] && {
-	iptables -N MINIUPNPD
-	iptables -t nat -N MINIUPNPD
-	[ $(iptables -L MINIUPNPD -nv|grep MINIUPNPD|cut -d'(' -f2|cut -d' ' -f1) == 0 ] && iptables -I FORWARD -i pppoe-wan -o br-lan -j MINIUPNPD
-	[ $(iptables -t nat -L MINIUPNPD -nv|grep MINIUPNPD|cut -d'(' -f2|cut -d' ' -f1) == 0 ] && iptables -t nat -I PREROUTING -i pppoe-wan -j MINIUPNPD
-	}
-	if [ $(uci get sysmonitor.sysmonitor.bbr) == 1 ];  then
-		sysctl -w net.ipv4.tcp_congestion_control=bbr
-	else
-		sysctl -w net.ipv4.tcp_congestion_control=cubic
-	fi
-	[ -f /etc/init.d/ipsec ] && {
-	if [ $(uci get sysmonitor.sysmonitor.ipsec) == 1 ];  then
-		uci set ipsec.ipsec.enabled='1'
-		uci commit ipsec
-		[ $(ps |grep ipsec/starter|grep -v grep|wc -l) -eq 0 ] && /etc/init.d/ipsec start
-	else
-		uci set ipsec.ipsec.enabled='0'
-		uci commit ipsec
-		[ $(ps |grep ipsec/starter|grep -v grep|wc -l) -ne 0 ] && /etc/init.d/ipsec stop
-	fi
-	}
-	[ -f /etc/init.d/luci-app-pptp-server ] && {
-	if [ $(uci get sysmonitor.sysmonitor.pptp) == 1 ];  then
-		uci set luci-app-pptp-server.pptpd.enabled='1'
-		uci commit luci-app-pptp-server
-		 [ $(ps |grep pptpd|grep -v grep|wc -l) -eq 0 ] && /etc/init.d/luci-app-pptp-server start
-	else
-		uci set luci-app-pptp-server.pptpd.enabled='0'
-		uci commit luci-app-pptp-server
-		[ $(ps |grep pptpd|grep -v grep|wc -l) -ne 0 ] && /etc/init.d/luci-app-pptp-server stop
-	fi
-	}
-	if [ $(uci get sysmonitor.sysmonitor.vpn) == 0 ];  then
-		# Stop Passwall
-		if [ -f "/etc/init.d/passwall" ]; then
-			if [ $(uci get passwall.@global[0].enabled) == 1 ]; then
-				uci set passwall.@global[0].enabled=0
-				uci commit passwall
-				[ "$(ps |grep passwall |grep -v grep |wc -l)" -gt 0 ] && /etc/init.d/passwall stop &
-			fi
-		fi
-		# Stop Shadowsocksr
-		if [ -f "/etc/init.d/shadowsocksr" ]; then
-			[ "$(ps |grep ssr- |grep -v grep |wc -l)" -gt 0 ] && /etc/init.d/shadowsocksr stop &
-		fi
-	else
-		if [ -f "/etc/init.d/passwall" ]; then
-			if [ $(uci get passwall.@global[0].tcp_node) != 'nil' ]; then
-				uci set passwall.@global[0].enabled=1
-				uci commit passwall
-				[ "$(ps |grep passwall |grep -v grep |wc -l)" -eq 0 ] && /etc/init.d/passwall restart &
-			fi			
-		elif [ -f "/etc/init.d/shadowsocksr" ]; then		
-		[ "$(ps |grep ssr- |grep -v grep |wc -l)" -eq 0 ] && /etc/init.d/shadowsocksr restart &
-		else
-			uci set sysmonitor.sysmonitor.vpn=0
-			uci commit sysmonitor
-			touch /tmp/sysmonitor
-		fi
-	fi
 	if [ -f "/etc/init.d/ddns" ]; then
 		if [ $(uci get sysmonitor.sysmonitor.ddns) == 1 ];  then
 			/etc/init.d/ddns enable
 			if [ $(ps |grep ddns|grep -v grep|wc -l) == 0 ]; then
 				/etc/init.d/ddns start
-			else
-				/etc/init.d/ddns restart
 			fi
 		else
 			/etc/init.d/ddns disable
 			/etc/init.d/ddns stop
 		fi
 	fi
-	if [ -f "/etc/init.d/smartdns" ]; then
-		if [ $(uci get sysmonitor.sysmonitor.smartdnsAD) == 1 ];  then
-			sed -i s/".*$conf-file.*$"/"conf-file \/etc\/smartdns\/anti-ad-for-smartdns.conf"/ /etc/smartdns/custom.conf
-		else
-			sed -i s/".*$conf-file.*$"/"#conf-file \/etc\/smartdns\/anti-ad-for-smartdns.conf"/ /etc/smartdns/custom.conf	
-		fi
-		[ -f /tmp/smartdns.cache ] && rm /tmp/smartdns.cache
-		if [ $(uci get sysmonitor.sysmonitor.smartdns) == 1 ];  then
-			uci set smartdns.@smartdns[0].enabled='1'
-			uci set smartdns.@smartdns[0].seconddns_enabled='1'
-			uci set smartdns.@smartdns[0].port='6053'
-			uci commit smartdns
-			sed -i '/address/d' /etc/smartdns/custom.conf
-			echo "address /NAS/19.168.1.8" >> /etc/smartdns/custom.conf
-			if [ $(ps |grep smartdns|grep -v grep|wc -l) -gt 0 ] ; then
-				/etc/init.d/smartdns restart
-			else
-				/etc/init.d/smartdns start
-			fi
-		else
-			uci set smartdns.@smartdns[0].enabled='0'
-			uci set smartdns.@smartdns[0].seconddns_enabled='0'
-			uci commit smartdns
-			[ "$(ps |grep smartdns |grep -v grep |wc -l)" -gt 0 ] && /etc/init.d/smartdns stop
-			uci del dhcp.@dnsmasq[0].server
-			uci set dhcp.@dnsmasq[0].port=''
-			uci set dhcp.@dnsmasq[0].noresolv=0
-			uci commit dhcp
-			/etc/init.d/dnsmasq restart
-		fi
-	fi
+	$APP_PATH/sysapp.sh vpn
 	$APP_PATH/sysapp.sh getip
 	set sysmonitor.sysmonitor.enable=1
 	set commit sysmonitor
