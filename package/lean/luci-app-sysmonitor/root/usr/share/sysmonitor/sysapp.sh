@@ -54,7 +54,7 @@ ssr() {
 	[ -f "/etc/init.d/passwall" ] && ssrp='<a href="/cgi-bin/luci/admin/services/passwall" target="_blank">Passwall '
 	if [ ! "$ssr" == '' ]; then
 		ssrstatus='Stopped'
-		[ "$(ps -w |grep ssrplus/bin/ssr-|grep -v grep |wc -l)" -gt 0 ] && ssrstatus='Running'
+		[ "$(ps -w |grep /etc/ssrplus|grep -v grep |wc -l)" -gt 0 ] && ssrstatus='Running'
 	fi
 	if [ ! "$ssrp" == '' ]; then
 		ssrpstatus='Stopped'
@@ -135,9 +135,8 @@ do
 	fi
 	s=$n
 done
-users=$(cat $file|grep peer|wc -l)
-let 'users=users-1'
-[ "$users" -lt 1 ] && users='None'
+users=$(cat $file|sed "/GWLcAE1Of.*$/d"|grep peer|wc -l)
+#[ "$users" == 0 ] && users='None'
 echo $users
 }
 
@@ -199,7 +198,7 @@ switch_vpn() {
 				echo "Shadowsocksr"
 			fi
 			
-		elif [ "$(ps -w|grep ssrplus/bin/ssr-|grep -v grep|wc -l)" == 0 ]; then
+		elif [ "$(ps -w|grep /etc/ssrplus|grep -v grep|wc -l)" == 0 ]; then
 			[ -f "/etc/init.d/shadowsocksr" ] && /etc/init.d/shadowsocksr restart &
 			echo "Shadowsocksr"
 		fi
@@ -208,7 +207,7 @@ switch_vpn() {
 
 onoff_vpn() {
 	ssr=$(ps |grep /etc/passwall |grep -v grep |wc -l)
-	[ $ssr -lt 1 ] && ssr=$(ps -w |grep ssrplus/bin/ssr-|grep -v grep |wc -l)
+	[ $ssr -lt 1 ] && ssr=$(ps -w |grep /etc/ssrplus|grep -v grep |wc -l)
 
 	if [ $ssr -gt 0 ];  then
 		# Stop Passwall
@@ -218,7 +217,7 @@ onoff_vpn() {
 			/etc/init.d/passwall stop &
 		fi
 		# Stop Shadowsocksr
-		[ "$(ps |grep ssrplus/bin/ssr-|grep -v grep |wc -l)" -gt 0 ] && /etc/init.d/shadowsocksr stop &
+		[ "$(ps |grep /etc/ssrplus|grep -v grep |wc -l)" -gt 0 ] && /etc/init.d/shadowsocksr stop &
 		uci set sysmonitor.sysmonitor.vpn=0
 	else
 		if [ -f "/etc/init.d/passwall" ]; then
@@ -230,7 +229,7 @@ onoff_vpn() {
 			fi
 			fi			
 		elif [ -f "/etc/init.d/shadowsocksr" ]; then
-			if [ "$(ps |grep ssrplus/bin/ssr-|grep -v grep |wc -l)" -lt 1 ]; then
+			if [ "$(ps |grep /etc/ssrplus|grep -v grep |wc -l)" -lt 1 ]; then
 				/etc/init.d/shadowsocksr restart &
 			fi
 		else
@@ -268,43 +267,25 @@ getip6() {
 	echo $ip
 }
 
-minidlna() {
-	[ ! -d /var/minidlna ] && mkdir /var/minidlna
-	path="/var/minidlna"
-	/etc/init.d/minidlna stop 2>/dev/null
-	sed -i '/media_dir/d' /etc/config/minidlna
-	dir=$(ls -d $path/* 2>/dev/null) 
-	for n in $dir
-	do
-		umount $n 2>/dev/null
-		rmdir $n
-	done
-	str=$(uci_get_by_name $NAME sysmonitor minidlna 0)','
-	str=$(echo $str|sed 's/,,/,/g')
-	num=$(echo $str|awk -F"," '{print NF-1}')
-	a=1
-	while [ $a -le $num ]
-	do
- 	  	dir=$(echo $str|cut -d',' -f $a)
-		status=$(mount|grep cifs|grep '/'$dir)
-		[  -n "$status" ] && {
-			
-			mkdir $path/$dir
-			mount --bind /mnt/$dir $path/$dir
-			uci add_list minidlna.config.media_dir="$path/$dir"
-		}
-   		a=`expr $a + 1`
-	done
-	uci commit minidlna
-	/etc/init.d/minidlna start 2>/dev/null
+gethost() {
+	if [ -n "$1" ]; then
+		vpn=$1		
+	else
+		vpn=$(uci get sysmonitor.sysmonitor.vpnip)
+	fi
+	host=$(nslookup $vpn|grep name|cut -d'=' -f2|cut -d' ' -f2)
+	[ ! -n "$host" ] && host=$vpn
+	echo $host
 }
 
-minidlna_status() {
-status=$(/usr/bin/wget -qO- 'http://127.0.0.1:8200')
-status=$(echo ${status#*<tr><td>})
-status=$(echo ${status%<h3>*})
-status=$(echo $status|sed 's/<\/td><td>/(/g'|sed 's/<\/td><\/tr><tr>/)/g'|sed 's/<\/td><\/tr><\/table>/)/g'|sed 's/ /-/g'|sed 's/<td>/ /g')
-echo $status
+service_sys() {
+	if [ "$(uci get sysmonitor.sysmonitor.enable)" == 0 ]; then
+		uci set sysmonitor.sysmonitor.enable=1
+	else
+		uci set sysmonitor.sysmonitor.enable=0
+	fi
+	uci commit sysmonitor
+	/etc/init.d/sysmonitor restart
 }
 
 service_ddns() {
@@ -346,11 +327,8 @@ set_smartdns() {
 			sed -i s/".*$conf-file.*$"/"#conf-file \/etc\/smartdns\/anti-ad-for-smartdns.conf"/ /etc/smartdns/custom.conf	
 		fi
 		[ -f /tmp/smartdns.cache ] && rm /tmp/smartdns.cache
-
 		if [ $(uci get sysmonitor.sysmonitor.smartdns) == 1 ];  then
 			port='5335'
-			sed -i '/address/d' /etc/smartdns/custom.conf
-			echo "address /NAS/192.168.1.8" >> /etc/smartdns/custom.conf
 			if [ -f "/etc/init.d/shadowsocksr" ]; then
 				[ "$(uci get shadowsocksr.@global[0].pdnsd_enable)" -ne 0 ] && port='8653'		
 			fi
@@ -358,7 +336,7 @@ set_smartdns() {
 			start_smartdns $port
 		else
 			if [ -f "/etc/init.d/shadowsocksr" ]; then
-				if [ "$(ps |grep sssrplus/bin/ssr-|grep -v grep|wc -l)" == 0 ]; then
+				if [ "$(ps |grep /etc/ssrplus|grep -v grep|wc -l)" == 0 ]; then
 					touch /tmp/smartdns_stop
 				else
 					if [ "$(uci get shadowsocksr.@global[0].pdnsd_enable)" -ne 0 ]; then
@@ -384,11 +362,6 @@ set_smartdns() {
 			if [ -f "/tmp/smartdns_stop" ]; then
 				rm /tmp/smartdns_stop
 				/etc/init.d/smartdns stop >/dev/null 2>&1
-#				uci del dhcp.@dnsmasq[0].server
-#				uci set dhcp.@dnsmasq[0].port=''
-#				uci set dhcp.@dnsmasq[0].noresolv=0
-#				uci commit dhcp
-#				/etc/init.d/dnsmasq restart
 			fi
 
 		fi
@@ -438,16 +411,16 @@ shadowsocksr() {
 vpn() {
 	if [ $(uci get sysmonitor.sysmonitor.vpns) == 1 ];  then
 		[ -f "/tmp/set_smartdns" ] && rm /tmp/set_smartdns
-		if [ $(ps |grep ssrplus/bin/ssr-|grep -v grep|wc -l) -eq 0 ]; then
+		if [ $(ps |grep /etc/ssrplus|grep -v grep|wc -l) == 0 ]; then
 			[ -f "/etc/init.d/shadowsocksr" ] && /etc/init.d/shadowsocksr start &
 		fi
 	else
 		touch /tmp/set_smartdns
-		[ $(ps |grep ssrplus/bin/ssr-|grep -v grep|wc -l) -gt 0 ] && /etc/init.d/shadowsocksr stop &
+		[ $(ps |grep /etc/ssrplus|grep -v grep|wc -l) -gt 0 ] && /etc/init.d/shadowsocksr stop &
 	fi
 	if [ $(uci get sysmonitor.sysmonitor.vpnp) == 1 ];  then
 		[ -f "/tmp/set_smartdns" ] && rm /tmp/set_smartdns
-		if [ $(ps |grep /etc/passwall|grep -v grep|wc -l) -eq 0 ]; then
+		if [ $(ps |grep /etc/passwall|grep -v grep|wc -l) == 0 ]; then
 			[ -f "/etc/init.d/passwall" ] && /etc/init.d/passwall start &
 		fi
 	else
@@ -461,19 +434,73 @@ vpn() {
 }
 
 vpns() {
-	if [ "$(uci get sysmonitor.sysmonitor.vpnip)" == '192.168.1.110' ]; then
-		vpnip='192.168.1.8'
-	else
-		vpnip='192.168.1.110'
+	vpnlist=$(uci get sysmonitor.sysmonitor.vpn)
+		if [ ! -n "$vpnlist" ]; then
+		uci set sysmonitor.sysmonitor.vpn='192.168.1.110'
+		uci commit sysmonitor
+		vpnlist=$(uci get sysmonitor.sysmonitor.vpn)
 	fi
+	vpnip=$(uci get sysmonitor.sysmonitor.vpnip)
+	k=0
+	for n in $vpnlist
+	do
+		if [ "$k" == 1 ]; then
+			vpnip=$n
+			break
+		fi
+		[ "$vpnip" == "$n" ] && {
+			k=1
+			vpnip=$(echo $vpnlist|cut -d' ' -f1)
+		}
+	done
+	[ "$k" == 0 ] && vpnip=$(echo $vpnlist|cut -d' ' -f1)
 	uci set sysmonitor.sysmonitor.vpnip=$vpnip
 	uci commit sysmonitor
+#	[ "$(uci get network.wan.gateway)" != "$(uci get sysmonitor.sysmonitor.homeip)" ] && touch /tmp/sysmonitor
 	touch /tmp/sysmonitor
+}
+
+setdns() {
+	dnslist=$(uci get sysmonitor.sysmonitor.dns)
+	if [ "$dnslist" != "$(uci get network.lan.dns)" ]; then
+		d=$(date "+%Y-%m-%d %H:%M:%S")
+		echo $d": Set DNS "$dnslist >> /var/log/sysmonitor.log
+		uci del network.wan.dns
+		uci del network.lan.dns
+		for n in $dnslist
+		do 		
+			uci add_list network.wan.dns=$n
+			uci add_list network.lan.dns=$n
+		done
+		uci commit network
+		ifup lan
+		ifup wan
+		ifup wan6
+		/etc/init.d/odhcpd restart
+	fi
+}
+
+refresh() {
+arg=$(ps | grep sysmonitor.sh | grep -v grep | wc -l)
+if [ $arg == 0 ]; then
+	/etc/init.d/sysmonitor restart
+elif [ $arg == 1 ]; then
+	touch /tmp/sysmonitor
+else
+	killall sysmonitor.sh
+	/etc/init.d/sysmonitor restart
+fi
 }
 
 arg1=$1
 shift
 case $arg1 in
+refresh)
+	refresh
+	;;
+setdns)
+	setdns
+	;;
 vpns)
 	vpns
 	;;
@@ -498,17 +525,17 @@ service_smartdns)
 service_ddns)
 	service_ddns
 	;;
-minidlna_status)
-	minidlna_status
-	;;
-minidlna)
-	minidlna
+service_sys)
+	service_sys
 	;;
 getip)
 	getip
 	;;
 getip6)
 	getip6
+	;;
+gethost)
+	gethost $1
 	;;
 agh)
 	agh
