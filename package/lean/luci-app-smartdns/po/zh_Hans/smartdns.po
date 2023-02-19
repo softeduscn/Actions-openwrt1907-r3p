@@ -201,6 +201,15 @@ msgstr "文件类型"
 msgid "Filtering IP with blacklist"
 msgstr "使用IP黑名单过滤"
 
+msgid "First Ping"
+msgstr "最快PING"
+
+msgid "Fastest IP"
+msgstr "最快IP"
+
+msgid "Fastest Response"
+msgstr "最快响应"
+
 msgid "Force AAAA SOA"
 msgstr "停用IPV6地址解析"
 
@@ -246,6 +255,12 @@ msgstr "IPset名称"
 msgid "IPset name."
 msgstr "IPSet名称。"
 
+msgid "Ipset name, Add domain result to ipset when speed check fails."
+msgstr "IPset名称，当测速失败时，将查询到的结果添加到对应的IPSet集合中。"
+
+msgid "ipset name format error, format: [#[4|6]:]ipsetname"
+msgstr "IPset名称格式错误，格式：[#[4|6]:]ipsetname"
+
 msgid "If you like this software, please buy me a cup of coffee."
 msgstr "如果本软件对你有帮助，请给作者加个蛋。"
 
@@ -256,7 +271,7 @@ msgid ""
 "Include other config files from /etc/smartdns/conf.d or custom path, can be "
 "downloaded from the download page."
 msgstr ""
-"包含配置文件，路径为/etc/smartdns/conf.d，或自定义配置文件路径，可以从下载页"
+"包含配置文件，路径为/etc/smartdns/conf.d，或自定义配置文件路径，可以从下载页配置自动下载。"
 "面配置自动下载。"
 
 msgid "List of files to download."
@@ -291,6 +306,15 @@ msgstr "NFTSet名称格式错误，格式：[#[4|6]:[family#table#set]]"
 
 msgid "NFTset name, format: [#[4|6]:[family#table#set]]"
 msgstr "NFTSet名称，格式：[#[4|6]:[family#table#set]]"
+
+msgid "Nftset name, Add domain result to nftset when speed check fails, format: [#[4|6]:[family#table#set]]"
+msgstr "NFTset名称，当测速失败时，将查询到的结果添加到对应的NFTSet集合中。"
+
+msgid "No Speed IPset Name"
+msgstr "无速度时IPSet名称"
+
+msgid "No Speed NFTset Name"
+msgstr "无速度时NFTSet名称"
 
 msgid "NOT RUNNING"
 msgstr "未运行"
@@ -342,6 +366,9 @@ msgstr "解析本地主机名"
 
 msgid "Resolve local hostnames by reading Dnsmasq lease file."
 msgstr "读取Dnsmasq的租约文件解析本地主机名。"
+
+msgid "Response Mode"
+msgstr "响应模式"
 
 msgid "Restart"
 msgstr "重启"
@@ -454,6 +481,14 @@ msgstr "SmartDNS的服务器名称，默认为smartdns，留空为主机名"
 
 msgid "Smartdns speed check mode."
 msgstr "SmartDNS测速模式。"
+
+msgid ""
+"Smartdns response mode, First Ping: return the first ping IP, "
+"Fastest IP: return the fastest IP, Fastest Response: return the fastest "
+"DNS response."
+msgstr ""
+"SmartDNS响应模式，最快PING： 返回最早有ping结果的IP，速度适中；最快IP： "
+"返回最快IP，查询请求可能延长； 最快响应：返回最快响应的结果。查询请求时间短。"
 
 msgid "Speed Check Mode"
 msgstr "测速模式"

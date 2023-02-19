@@ -155,6 +155,11 @@ return view.extend({
 		o.default = 53;
 		o.datatype = "port";
 		o.rempty = false;
+		
+		// auto-conf-dnsmasq;
+		o = s.taboption("settings", form.Flag, "auto_set_dnsmasq", _("Automatically Set Dnsmasq"), _("Automatically set as upstream of dnsmasq when port changes."));
+		o.rmempty = false;
+		o.default = o.enabled;
 
 		///////////////////////////////////////
 		// advanced settings;
@@ -198,6 +203,16 @@ return view.extend({
 
 			return true;
 		}
+
+		// response mode;
+		o = s.taboption("advanced", form.ListValue, "response_mode", _("Response Mode"),
+			_("Smartdns response mode, First Ping: return the first ping IP, Fastest IP: return the fastest IP, Fastest Response: return the fastest DNS response."));
+		o.rmempty = true;
+		o.placeholder = "default";
+		o.value("", _("default"));
+		o.value("first-ping", _("First Ping"));
+		o.value("fastest-ip", _("Fastest IP"));
+		o.value("fastest-response", _("Fastest Response"));
 
 		// Enable TCP server;
 		o = s.taboption("advanced", form.Flag, "tcp_server", _("TCP Server"), _("Enable TCP DNS Server"));
@@ -252,11 +267,6 @@ return view.extend({
 		o.rmempty = false;
 		o.default = o.enabled;
 
-		// auto-conf-dnsmasq;
-		o = s.taboption("advanced", form.Flag, "auto_set_dnsmasq", _("Automatically Set Dnsmasq"), _("Automatically set as upstream of dnsmasq when port changes."));
-		o.rmempty = false;
-		o.default = o.enabled;
-
 		// Force AAAA SOA
 		o = s.taboption("advanced", form.Flag, "force_aaaa_soa", _("Force AAAA SOA"), _("Force AAAA SOA."));
 		o.rmempty = false;
@@ -266,6 +276,48 @@ return view.extend({
 		o = s.taboption("advanced", form.Flag, "force_https_soa", _("Force HTTPS SOA"), _("Force HTTPS SOA."));
 		o.rmempty = false;
 		o.default = o.enabled;
+
+		// Ipset no speed.
+		o = s.taboption("advanced", form.Value, "ipset_no_speed", _("No Speed IPset Name"), 
+			_("Ipset name, Add domain result to ipset when speed check fails."));
+		o.rmempty = true;
+		o.datatype = "string";
+		o.rempty = true;
+		o.validate = function (section_id, value) {
+			if (value == "") {
+				return true;
+			}
+
+			var ipset = value.split(",")
+			for (var i = 0; i < ipset.length; i++) {
+				if (!ipset[i].match(/^(#[4|6]:)?[a-zA-Z0-9\-_]+$/)) {
+					return _("ipset name format error, format: [#[4|6]:]ipsetname");
+				}
+			}
+
+			return true;
+		}
+
+		// NFTset no speed.
+		o = s.taboption("advanced", form.Value, "nftset_no_speed", _("No Speed NFTset Name"), 
+			_("Nftset name, Add domain result to nftset when speed check fails, format: [#[4|6]:[family#table#set]]"));
+		o.rmempty = true;
+		o.datatype = "string";
+		o.rempty = true;
+		o.validate = function (section_id, value) {
+			if (value == "") {
+				return true;
+			}
+
+			var nftset = value.split(",")
+			for (var i = 0; i < nftset.length; i++) {
+				if (!nftset[i].match(/^#[4|6]:[a-zA-Z0-9\-_]+#[a-zA-Z0-9\-_]+#[a-zA-Z0-9\-_]+$/)) {
+					return _("NFTset name format error, format: [#[4|6]:[family#table#set]]");
+				}
+			}
+
+			return true;
+		}
 
 		// rr-ttl;
 		o = s.taboption("advanced", form.Value, "rr_ttl", _("Domain TTL"), _("TTL for all domain result."));
@@ -633,7 +685,7 @@ return view.extend({
 		o.modalonly = true;
 		o.optional = true;
 		o.rempty = true;
-		o.validate = function(section_id, value) {
+		o.validate = function (section_id, value) {
 			var flag = this.formvalue(section_id);
 			if (flag == "0") {
 				return true;
@@ -651,7 +703,7 @@ return view.extend({
 
 			return true;
 		}
-		
+
 		// other args
 		o = s.taboption("advanced", form.Value, "addition_arg", _("Additional Server Args"),
 			_("Additional Args for upstream dns servers"))
@@ -710,8 +762,22 @@ return view.extend({
 
 		o = s.taboption("forwarding", form.Value, "ipset_name", _("IPset Name"), _("IPset name."));
 		o.rmempty = true;
-		o.datatype = "hostname";
+		o.datatype = "string";
 		o.rempty = true;
+		o.validate = function (section_id, value) {
+			if (value == "") {
+				return true;
+			}
+
+			var ipset = value.split(",")
+			for (var i = 0; i < ipset.length; i++) {
+				if (!ipset[i].match(/^(#[4|6]:)?[a-zA-Z0-9\-_]+$/)) {
+					return _("ipset name format error, format: [#[4|6]:]ipsetname");
+				}
+			}
+
+			return true;
+		}
 
 		o = s.taboption("forwarding", form.Value, "nftset_name", _("NFTset Name"), _("NFTset name, format: [#[4|6]:[family#table#set]]"));
 		o.rmempty = true;
@@ -724,7 +790,7 @@ return view.extend({
 
 			var nftset = value.split(",")
 			for (var i = 0; i < nftset.length; i++) {
-				if (!nftset[i].match(/#[4|6]:[a-zA-Z0-9\-_]+#[a-zA-Z0-9\-_]+#[a-zA-Z0-9\-_]+$/)) {
+				if (!nftset[i].match(/^#[4|6]:[a-zA-Z0-9\-_]+#[a-zA-Z0-9\-_]+#[a-zA-Z0-9\-_]+$/)) {
 					return _("NFTset name format error, format: [#[4|6]:[family#table#set]]");
 				}
 			}
